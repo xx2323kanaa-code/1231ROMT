@@ -1,31 +1,20 @@
-// ===============================
-// analyze.js – 1231TROM Core
-// ===============================
-
+// ===== Debug =====
 let DEBUG_LOG = [];
 let hud = null;
 
-// ---------- debug ----------
 function log(msg){
   const t = new Date().toLocaleTimeString();
   const line = `[${t}] ${msg}`;
   DEBUG_LOG.push(line);
-  if (!hud) hud = document.getElementById("hud");
-  if (hud) hud.innerText = msg;
-  console.log(line);
+  if(hud) hud.innerText = line;
 }
 
 function copyDebugLog(){
-  if (DEBUG_LOG.length === 0){
-    alert("ログがありません");
-    return;
-  }
-  navigator.clipboard.writeText(DEBUG_LOG.join("\n"))
-    .then(()=>alert("デバッグログをコピーしました"))
-    .catch(()=>alert("コピーに失敗しました"));
+  navigator.clipboard.writeText(DEBUG_LOG.join("\n"));
+  alert("デバッグログをコピーしました");
 }
 
-// ---------- util ----------
+// ===== Utils =====
 function innerAngle(a,b,c){
   const ab={x:a.x-b.x,y:a.y-b.y,z:(a.z||0)-(b.z||0)};
   const cb={x:c.x-b.x,y:c.y-b.y,z:(c.z||0)-(b.z||0)};
@@ -35,25 +24,17 @@ function innerAngle(a,b,c){
   return Math.acos(dot/mag)*180/Math.PI;
 }
 
-function seek(video,time){
+async function seek(video,t){
   return new Promise(r=>{
-    const h=()=>{video.removeEventListener("seeked",h);r();};
-    video.addEventListener("seeked",h);
-    video.currentTime=time;
+    video.onseeked=()=>r();
+    video.currentTime=t;
   });
 }
 
-async function processVideo(file, onResult){
-  DEBUG_LOG = [];
-  log("processVideo start");
-
+async function processVideo(file,onResult){
   const video=document.createElement("video");
   video.src=URL.createObjectURL(file);
-  video.muted=true;
-  video.playsInline=true;
   await video.play();
-
-  log(`video loaded (${video.duration.toFixed(2)}s)`);
 
   const canvas=document.createElement("canvas");
   const ctx=canvas.getContext("2d");
@@ -62,6 +43,7 @@ async function processVideo(file, onResult){
     locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
   });
   hands.setOptions({maxNumHands:1,modelComplexity:1});
+
   hands.onResults(onResult);
 
   for(let t=0;t<video.duration;t+=0.5){
@@ -76,58 +58,58 @@ async function processVideo(file, onResult){
       log("hands.send failed");
     }
   }
-
-  log("processVideo finished");
 }
 
-// ===============================
-// ① MP / IP
-// ===============================
+// ===== ① MP / IP =====
 async function analyzeMPIP(){
+  hud = document.getElementById("hud");
+  DEBUG_LOG = [];
+  log("analyzeMPIP start");
+
   const file=document.getElementById("video1").files[0];
   if(!file) return;
 
-  log("① MP/IP analyze start");
-
   let MP=[],IP=[];
+
   await processVideo(file,res=>{
     if(!res.multiHandLandmarks) return;
     const lm=res.multiHandLandmarks[0];
     const palm=lm[0];
-    const MPa=innerAngle(palm,lm[2],lm[3]);
-    const IPa=innerAngle(lm[2],lm[3],lm[4]);
-    if(MPa!=null) MP.push(MPa);
-    if(IPa!=null) IP.push(IPa);
+    const mp=innerAngle(palm,lm[2],lm[3]);
+    const ip=innerAngle(lm[2],lm[3],lm[4]);
+    if(mp!=null) MP.push(mp);
+    if(ip!=null) IP.push(ip);
   });
 
   const flex=x=>180-Math.min(...x);
   const ext=x=>180-Math.max(...x);
 
-  document.getElementById("result").innerHTML=`
-    <b>① MP / IP</b><br>
-    MP：屈曲 ${flex(MP).toFixed(1)}° / 伸展 ${ext(MP).toFixed(1)}°<br>
-    IP：屈曲 ${flex(IP).toFixed(1)}° / 伸展 ${ext(IP).toFixed(1)}°
-  `;
+  document.getElementById("result").innerHTML=
+  `<b>① MP / IP</b><br>
+   MP：屈曲 ${flex(MP).toFixed(1)}° / 伸展 ${ext(MP).toFixed(1)}°<br>
+   IP：屈曲 ${flex(IP).toFixed(1)}° / 伸展 ${ext(IP).toFixed(1)}°`;
 
-  log("① MP/IP analyze finished");
+  log("analyzeMPIP finished");
 }
 
-// ===============================
-// ④ Opposition
-// ===============================
+// ===== ④ Opposition =====
 async function analyzeOpposition(){
+  hud = document.getElementById("hud");
+  DEBUG_LOG = [];
+  log("analyzeOpposition start");
+
   const file=document.getElementById("video4").files[0];
   if(!file) return;
 
-  log("④ Opposition analyze start");
-
   let dist=[];
+
   await processVideo(file,res=>{
     if(!res.multiHandLandmarks) return;
     const lm=res.multiHandLandmarks[0];
     const thumb=lm[4];
-    const target=lm[12]; // 中指
+    const target=lm[12];
     const palm=lm[0];
+
     const d=Math.hypot(
       thumb.x-target.x,
       thumb.y-target.y,
@@ -141,10 +123,9 @@ async function analyzeOpposition(){
     if(isFinite(d/norm)) dist.push(d/norm);
   });
 
-  document.getElementById("result").innerHTML+=`
-    <br><br><b>④ 対立</b><br>
-    母指―中指 指尖距離（正規化・無次元）：${Math.min(...dist).toFixed(2)}
-  `;
+  document.getElementById("result").innerHTML +=
+  `<br><br><b>④ 対立</b><br>
+   指尖距離（正規化・無次元）：${Math.min(...dist).toFixed(2)}`;
 
-  log("④ Opposition analyze finished");
+  log("analyzeOpposition finished");
 }
