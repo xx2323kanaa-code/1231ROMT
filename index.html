@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>1231TROM – Thumb ROM Analyzer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<style>
+body{
+  background:#111;color:#eee;
+  font-family:system-ui,-apple-system;
+  padding:16px;margin:0;
+}
+h1{font-size:18px;margin-bottom:8px}
+.section{
+  background:#1e1e1e;
+  padding:12px;border-radius:10px;
+  margin-bottom:12px;
+}
+button{
+  background:#333;color:#fff;
+  border:none;border-radius:8px;
+  padding:8px 12px;font-size:13px;
+}
+button:hover{background:#555}
+.note{font-size:12px;color:#bbb;margin-top:6px}
+#result{line-height:1.5}
+
+/* Debug */
+#hud{
+  font-size:12px;
+  color:#8f8;
+  margin:6px 0;
+  min-height:1.2em;
+}
+</style>
+</head>
+
+<body>
+
+<h1>母指 可動域解析（1231TROM）</h1>
+
+<!-- ① MP / IP -->
+<div class="section">
+<b>① MP / IP 屈曲・伸展</b><br>
+<button disabled>手のポジション説明（ダミー）</button><br><br>
+<input type="file" id="video1" accept="video/*">
+<button onclick="analyzeMPIP()">解析</button>
+</div>
+
+<!-- ② CMC 掌側外転 -->
+<div class="section">
+<b>② CMC 掌側外転</b><br>
+<button disabled>手のポジション説明（ダミー）</button><br><br>
+<input type="file" id="video2" accept="video/*">
+<div class="note">※ 現在はアップロードのみ（解析なし）</div>
+</div>
+
+<!-- ③ CMC 橈側外転 -->
+<div class="section">
+<b>③ CMC 橈側外転</b><br>
+<button disabled>手のポジション説明（ダミー）</button><br><br>
+<input type="file" id="video3" accept="video/*">
+<div class="note">※ 現在はアップロードのみ（解析なし）</div>
+</div>
+
+<!-- ④ 対立 -->
+<div class="section">
+<b>④ 対立（Opposition）</b><br>
+<button disabled>手のポジション説明（ダミー）</button><br><br>
+<input type="file" id="video4" accept="video/*">
+<button onclick="analyzeOpposition()">解析</button>
+</div>
+
+<!-- ===== Result ===== -->
+<div class="section" id="result">
+解析結果がここに表示されます
+</div>
+
+<!-- ===== Debug ===== -->
+<div class="section">
+<b>Debug</b><br>
+<div id="hud">ready</div>
+<button onclick="copyDebugLog()">デバッグログコピー</button>
+</div>
+
+<!-- libs -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+<!-- Analyze.js（分離前提・既存のまま） -->
+<script src="Analyze.js"></script>
+
+</body>
+</html>
