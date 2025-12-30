@@ -2,93 +2,232 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>1231TROM – Thumb ROM Analyzer</title>
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>手指可動域評価（JOA準拠）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body{
-  background:#111;color:#eee;
+  background:#111;
+  color:#eee;
   font-family:system-ui,-apple-system;
-  padding:16px;margin:0;
+  margin:0;padding:16px;
 }
 h1{font-size:18px;margin-bottom:8px}
 .section{
   background:#1e1e1e;
-  padding:12px;border-radius:10px;
+  padding:12px;
+  border-radius:10px;
   margin-bottom:12px;
 }
 button{
   background:#333;color:#fff;
   border:none;border-radius:8px;
-  padding:8px 12px;font-size:13px;
+  padding:8px 12px;
+  font-size:13px;
 }
 button:hover{background:#555}
 .note{font-size:12px;color:#bbb;margin-top:6px}
-#result{line-height:1.5}
-
-/* Debug */
+#result{line-height:1.6}
 #hud{
+  position:fixed;
+  top:8px;left:8px;
+  font-size:11px;color:#9f9;
+}
+#buttons{
+  position:fixed;
+  right:12px;
+  bottom:12px;
+  display:flex;
+  gap:10px;
+}
+#joaPanel{
+  display:none;
+  position:fixed;
+  right:12px;
+  bottom:60px;
+  background:#222;
+  padding:12px;
+  border-radius:8px;
   font-size:12px;
-  color:#8f8;
-  margin:6px 0;
-  min-height:1.2em;
+  max-width:300px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:6px;
+}
+td,th{
+  border:1px solid #555;
+  padding:4px;
+  text-align:center;
 }
 </style>
 </head>
 
 <body>
 
-<h1>母指 可動域解析（1231TROM）</h1>
+<h1>手指の動きの評価（動画・選択式）</h1>
 
-<!-- ① MP / IP -->
+<!-- 患者向け説明 -->
 <div class="section">
-<b>① MP / IP 屈曲・伸展</b><br>
-<button disabled>手のポジション説明（ダミー）</button><br><br>
-<input type="file" id="video1" accept="video/*">
+<b>ご説明</b><br>
+このページでは、手指の動きを評価します。<br><br>
+
+・動画を使って、指の曲がり・伸びを確認します<br>
+・親指の「対立」は、<b>どの指の根元まで届くか</b>を選択します<br><br>
+
+※ ご自身で撮影する場合は、<b>手のひら側のカメラ</b>をおすすめします
+</div>
+
+<!-- ① 親指 MP / IP -->
+<div class="section">
+<b>① 親指の曲げ伸ばし（MP / IP）</b><br><br>
+<input type="file" id="videoMPIP" accept="video/*">
 <button onclick="analyzeMPIP()">解析</button>
 </div>
 
-<!-- ② CMC 掌側外転 -->
+<!-- ② 親指 対立（JOA） -->
 <div class="section">
-<b>② CMC 掌側外転</b><br>
-<button disabled>手のポジション説明（ダミー）</button><br><br>
-<input type="file" id="video2" accept="video/*">
-<div class="note">※ 現在はアップロードのみ（解析なし）</div>
+<b>② 親指の対立（JOA評価）</b><br><br>
+
+<img src="opposition_guide_1.png" style="width:100%;border-radius:8px"><br>
+<img src="opposition_guide_2.png" style="width:100%;border-radius:8px"><br>
+
+<div class="note">
+親指が、どの指の<b>根元</b>まで届きましたか？
+</div><br>
+
+<label><input type="radio" name="opposition" value="index"> 人さし指の根元</label><br>
+<label><input type="radio" name="opposition" value="middle"> 中指の根元</label><br>
+<label><input type="radio" name="opposition" value="ring"> 薬指の根元</label><br>
+<label><input type="radio" name="opposition" value="pinky"> 小指の根元</label><br><br>
+
+<button onclick="saveOpposition()">対立を記録</button>
 </div>
 
-<!-- ③ CMC 橈側外転 -->
-<div class="section">
-<b>③ CMC 橈側外転</b><br>
-<button disabled>手のポジション説明（ダミー）</button><br><br>
-<input type="file" id="video3" accept="video/*">
-<div class="note">※ 現在はアップロードのみ（解析なし）</div>
-</div>
-
-<!-- ④ 対立 -->
-<div class="section">
-<b>④ 対立（Opposition）</b><br>
-<button disabled>手のポジション説明（ダミー）</button><br><br>
-<input type="file" id="video4" accept="video/*">
-<button onclick="analyzeOpposition()">解析</button>
-</div>
-
-<!-- ===== Result ===== -->
+<!-- 結果 -->
 <div class="section" id="result">
-解析結果がここに表示されます
+結果がここに表示されます
 </div>
 
-<!-- ===== Debug ===== -->
-<div class="section">
-<b>Debug</b><br>
-<div id="hud">ready</div>
-<button onclick="copyDebugLog()">デバッグログコピー</button>
+<!-- HUD -->
+<div id="hud"></div>
+
+<!-- 右下ボタン -->
+<div id="buttons">
+<button onclick="copyDebugLog()">ログコピー</button>
+<button onclick="toggleJOA()">JOA参考値</button>
 </div>
 
-<!-- libs -->
+<!-- JOA 参考値 -->
+<div id="joaPanel">
+<b>JOA 手指可動域 参考値</b>
+<table>
+<tr><th>部位</th><th>屈曲</th><th>伸展</th></tr>
+<tr><td>母指MP</td><td>60°</td><td>0°</td></tr>
+<tr><td>母指IP</td><td>80°</td><td>0°</td></tr>
+</table>
+
+<table style="margin-top:8px">
+<tr><th>対立</th><th>評価</th></tr>
+<tr><td>示指基部</td><td>良好</td></tr>
+<tr><td>中指基部</td><td>中等度</td></tr>
+<tr><td>薬指基部</td><td>軽度制限</td></tr>
+<tr><td>小指基部</td><td>高度制限</td></tr>
+</table>
+
+<div class="note">※ 日本整形外科学会（JOA）基準</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 
-<!-- Analyze.js（分離前提・既存のまま） -->
-<script src="Analyze.js"></script>
+<script>
+/* ===== デバッグ ===== */
+let DEBUG_LOG=[];
+function log(m){
+  const t=new Date().toLocaleTimeString();
+  DEBUG_LOG.push(`[${t}] ${m}`);
+  document.getElementById("hud").innerText=m;
+}
+function copyDebugLog(){
+  navigator.clipboard.writeText(DEBUG_LOG.join("\n"));
+  alert("ログをコピーしました");
+}
+function toggleJOA(){
+  const p=document.getElementById("joaPanel");
+  p.style.display=(p.style.display==="none")?"block":"none";
+}
+
+/* ===== 角度 ===== */
+function innerAngle(a,b,c){
+  const ab={x:a.x-b.x,y:a.y-b.y,z:(a.z||0)-(b.z||0)};
+  const cb={x:c.x-b.x,y:c.y-b.y,z:(c.z||0)-(b.z||0)};
+  const dot=ab.x*cb.x+ab.y*cb.y+ab.z*cb.z;
+  const mag=Math.hypot(ab.x,ab.y,ab.z)*Math.hypot(cb.x,cb.y,cb.z);
+  if(!isFinite(dot/mag)) return null;
+  return Math.acos(dot/mag)*180/Math.PI;
+}
+
+/* ===== MP / IP ===== */
+async function analyzeMPIP(){
+  const file=document.getElementById("videoMPIP").files[0];
+  if(!file)return;
+
+  log("analyzeMPIP start");
+
+  const video=document.createElement("video");
+  video.src=URL.createObjectURL(file);
+  await video.play();
+
+  const canvas=document.createElement("canvas");
+  const ctx=canvas.getContext("2d");
+
+  const hands=new Hands({
+    locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+  });
+  hands.setOptions({maxNumHands:1,modelComplexity:1});
+
+  let MP=[],IP=[];
+  hands.onResults(res=>{
+    if(!res.multiHandLandmarks)return;
+    const lm=res.multiHandLandmarks[0];
+    const palm=lm[0];
+    const a1=innerAngle(palm,lm[2],lm[3]);
+    const a2=innerAngle(lm[2],lm[3],lm[4]);
+    if(a1!=null)MP.push(a1);
+    if(a2!=null)IP.push(a2);
+  });
+
+  for(let t=0;t<video.duration;t+=0.5){
+    log(`seek ${t.toFixed(2)}s`);
+    video.currentTime=t;
+    await new Promise(r=>video.onseeked=r);
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0);
+    try{await hands.send({image:canvas});}catch{}
+  }
+
+  const flex=x=>180-Math.min(...x);
+  const ext=x=>180-Math.max(...x);
+
+  document.getElementById("result").innerHTML=
+  `<b>① 親指 MP / IP</b><br>
+   MP：屈曲 ${flex(MP).toFixed(1)}° / 伸展 ${ext(MP).toFixed(1)}°<br>
+   IP：屈曲 ${flex(IP).toFixed(1)}° / 伸展 ${ext(IP).toFixed(1)}°`;
+
+  log("analyzeMPIP finished");
+}
+
+/* ===== 対立 ===== */
+function saveOpposition(){
+  const v=document.querySelector('input[name="opposition"]:checked');
+  if(!v)return;
+  document.getElementById("result").innerHTML+=
+    `<br><br><b>② 親指 対立（JOA）</b><br>
+     到達部位：${v.parentElement.innerText}`;
+}
+</script>
 
 </body>
 </html>
